@@ -6,10 +6,12 @@ import {
   MarketplaceInquiry,
   MarketplaceReservation,
   ClientViewing,
+  CallRecord,
   mockListings,
   mockInquiries,
   mockReservations,
   mockViewings,
+  mockCalls,
 } from "@/lib/mock-data";
 import { toast } from "sonner";
 
@@ -27,6 +29,7 @@ interface ListingsContextType {
   inquiries: MarketplaceInquiry[];
   reservations: MarketplaceReservation[];
   viewings: ClientViewing[];
+  calls: CallRecord[];
   stats: ListingsStats;
   addListing: (listing: Omit<PropertyListing, "id" | "createdAt" | "formattedPrice" | "viewingsCount" | "inquiriesCount">) => void;
   updateListing: (id: string, listing: Partial<PropertyListing>) => void;
@@ -36,6 +39,7 @@ interface ListingsContextType {
   addInquiry: (listingId: string, listingTitle: string, buyerName: string, buyerEmail: string, buyerPhone: string, message: string) => void;
   rescheduleViewing: (id: string, newDate: string, newTime: string) => Promise<void>;
   bookViewing: (listingId: string, listingTitle: string, listingImage: string, listingAddress: string, buyerName: string, buyerEmail: string, date: string, time: string) => void;
+  addCallRecord: (call: Omit<CallRecord, "id" | "createdAt">) => void;
   resetToDefaultData: () => void;
 }
 
@@ -45,12 +49,14 @@ const LOCAL_STORAGE_KEY_LISTINGS = "estatecall_listings_v1";
 const LOCAL_STORAGE_KEY_INQUIRIES = "estatecall_inquiries_v1";
 const LOCAL_STORAGE_KEY_RESERVATIONS = "estatecall_reservations_v1";
 const LOCAL_STORAGE_KEY_VIEWINGS = "estatecall_viewings_v1";
+const LOCAL_STORAGE_KEY_CALLS = "estatecall_calls_v1";
 
 export function ListingsProvider({ children }: { children: React.ReactNode }) {
   const [listings, setListings] = useState<PropertyListing[]>(mockListings);
   const [inquiries, setInquiries] = useState<MarketplaceInquiry[]>(mockInquiries);
   const [reservations, setReservations] = useState<MarketplaceReservation[]>(mockReservations);
   const [viewings, setViewings] = useState<ClientViewing[]>(mockViewings);
+  const [calls, setCalls] = useState<CallRecord[]>(mockCalls);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load from localStorage on mount
@@ -67,6 +73,9 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
 
       const savedViewings = localStorage.getItem(LOCAL_STORAGE_KEY_VIEWINGS);
       if (savedViewings) setViewings(JSON.parse(savedViewings));
+
+      const savedCalls = localStorage.getItem(LOCAL_STORAGE_KEY_CALLS);
+      if (savedCalls) setCalls(JSON.parse(savedCalls));
     } catch (e) {
       console.error("Failed to load state from localStorage", e);
     } finally {
@@ -82,10 +91,11 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(LOCAL_STORAGE_KEY_INQUIRIES, JSON.stringify(inquiries));
       localStorage.setItem(LOCAL_STORAGE_KEY_RESERVATIONS, JSON.stringify(reservations));
       localStorage.setItem(LOCAL_STORAGE_KEY_VIEWINGS, JSON.stringify(viewings));
+      localStorage.setItem(LOCAL_STORAGE_KEY_CALLS, JSON.stringify(calls));
     } catch (e) {
       console.error("Failed to save state to localStorage", e);
     }
-  }, [listings, inquiries, reservations, viewings, isInitialized]);
+  }, [listings, inquiries, reservations, viewings, calls, isInitialized]);
 
   // Derived stats
   const stats: ListingsStats = {
@@ -97,13 +107,22 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
     activeListingsCount: listings.filter((l) => l.status === "Available").length,
   };
 
+  const formatInrPrice = (price: number, listingType: string) => {
+    let base = "";
+    if (price >= 10000000) {
+      base = `₹${(price / 10000000).toFixed(2).replace(/\.00$/, "")} Cr`;
+    } else if (price >= 100000) {
+      base = `₹${(price / 100000).toFixed(0)} Lakh`;
+    } else {
+      base = `₹${price.toLocaleString("en-IN")}`;
+    }
+    return listingType === "For Rent" ? `${base}/mo` : base;
+  };
+
   const addListing = (
     data: Omit<PropertyListing, "id" | "createdAt" | "formattedPrice" | "viewingsCount" | "inquiriesCount">
   ) => {
-    const formattedPrice =
-      data.listingType === "For Rent"
-        ? `$${data.price.toLocaleString()}/mo`
-        : `$${data.price.toLocaleString()}`;
+    const formattedPrice = formatInrPrice(data.price, data.listingType);
 
     const newListing: PropertyListing = {
       ...data,
@@ -124,10 +143,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
         if (item.id !== id) return item;
         const merged = { ...item, ...updatedData };
         if (updatedData.price !== undefined || updatedData.listingType !== undefined) {
-          merged.formattedPrice =
-            merged.listingType === "For Rent"
-              ? `$${merged.price.toLocaleString()}/mo`
-              : `$${merged.price.toLocaleString()}`;
+          merged.formattedPrice = formatInrPrice(merged.price, merged.listingType);
         }
         return merged;
       })
@@ -203,7 +219,6 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const rescheduleViewing = async (id: string, newDate: string, newTime: string) => {
-    // Simulate network delay
     await new Promise((res) => setTimeout(res, 500));
 
     setViewings((prev) =>
@@ -213,7 +228,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
             ...vw,
             date: newDate,
             time: newTime,
-            status: "Pending", // Reset status to Pending per requirement
+            status: "Pending",
           };
         }
         return vw;
@@ -252,15 +267,27 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
     toast.success(`Viewing for "${listingTitle}" booked for ${date} at ${time}!`);
   };
 
+  const addCallRecord = (callData: Omit<CallRecord, "id" | "createdAt">) => {
+    const newCall: CallRecord = {
+      ...callData,
+      id: `call-${Date.now()}`,
+      createdAt: new Date().toLocaleString([], { dateStyle: "short", timeStyle: "short" }),
+    };
+
+    setCalls((prev) => [newCall, ...prev]);
+  };
+
   const resetToDefaultData = () => {
     setListings(mockListings);
     setInquiries(mockInquiries);
     setReservations(mockReservations);
     setViewings(mockViewings);
+    setCalls(mockCalls);
     localStorage.removeItem(LOCAL_STORAGE_KEY_LISTINGS);
     localStorage.removeItem(LOCAL_STORAGE_KEY_INQUIRIES);
     localStorage.removeItem(LOCAL_STORAGE_KEY_RESERVATIONS);
     localStorage.removeItem(LOCAL_STORAGE_KEY_VIEWINGS);
+    localStorage.removeItem(LOCAL_STORAGE_KEY_CALLS);
     toast.info("Store reset to initial seeded mock data.");
   };
 
@@ -271,6 +298,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
         inquiries,
         reservations,
         viewings,
+        calls,
         stats,
         addListing,
         updateListing,
@@ -280,6 +308,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
         addInquiry,
         rescheduleViewing,
         bookViewing,
+        addCallRecord,
         resetToDefaultData,
       }}
     >

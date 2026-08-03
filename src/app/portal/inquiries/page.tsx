@@ -163,9 +163,9 @@ export default function PortalInquiriesPage() {
                           <p className="text-muted-foreground text-[11px]">Speak directly with Prestige Estates Concierge</p>
                         </div>
                         <div className="flex items-center gap-3 text-xs font-semibold">
-                          <a href="tel:+15550192831" className="flex items-center gap-1 text-primary hover:underline">
+                          <a href="tel:+919876543210" className="flex items-center gap-1 text-primary hover:underline">
                             <Phone className="w-3.5 h-3.5" />
-                            +1 (555) 019-2831
+                            +91 98765 43210
                           </a>
                           <a href="mailto:concierge@estatecall.ai" className="flex items-center gap-1 text-primary hover:underline">
                             <Mail className="w-3.5 h-3.5" />

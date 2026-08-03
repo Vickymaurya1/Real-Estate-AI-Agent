@@ -327,22 +327,22 @@ export default function ListingDetailPage({ params }: PageProps) {
               </h4>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm">
-                  SJ
+                  {listing.agentName.split(" ").map(n => n[0]).join("")}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground">{listing.agentName}</p>
-                  <p className="text-xs text-muted-foreground">Prestige Estates Lead Agent</p>
+                  <p className="text-xs text-muted-foreground">Prestige Estates Senior Advisor</p>
                 </div>
               </div>
 
               <div className="pt-2 space-y-2 text-xs">
-                <a href="tel:+15550192831" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
+                <a href="tel:+919876543210" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
                   <Phone className="w-3.5 h-3.5 text-primary" />
-                  <span>+1 (555) 019-2831</span>
+                  <span>+91 98765 43210</span>
                 </a>
-                <a href="mailto:sarah@prestigeestates.com" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
+                <a href="mailto:concierge@prestigeestates.in" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
                   <Mail className="w-3.5 h-3.5 text-primary" />
-                  <span>sarah@prestigeestates.com</span>
+                  <span>concierge@prestigeestates.in</span>
                 </a>
               </div>
             </Card>

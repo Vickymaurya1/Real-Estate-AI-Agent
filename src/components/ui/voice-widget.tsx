@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Phone, PhoneOff, X, Sparkles, Volume2 } from "lucide-react";
-import { PropertyListing } from "@/lib/mock-data";
+import { Mic, Phone, PhoneOff, X, Sparkles, Volume2, CheckCircle2, RotateCw, FileText, User, Calendar, MapPin, DollarSign, BrainCircuit } from "lucide-react";
+import { PropertyListing, CallSummary } from "@/lib/mock-data";
+import { useListingsContext } from "@/context/listings-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface TranscriptEntry {
   id: string;
@@ -17,7 +19,6 @@ interface VoiceWidgetProps {
   listing: PropertyListing;
 }
 
-// Demo mode simulated responses per property
 function getDemoResponses(listing: PropertyListing): string[] {
   return [
     `Namaste! I'm Alexis, your residential specialist for ${listing.title}. How can I help you today?`,
@@ -30,6 +31,8 @@ function getDemoResponses(listing: PropertyListing): string[] {
 }
 
 export function VoiceWidget({ listing }: VoiceWidgetProps) {
+  const { addCallRecord } = useListingsContext();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
   const [callStatus, setCallStatus] = useState<"idle" | "connecting" | "listening" | "speaking">("idle");
@@ -37,35 +40,101 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [vapiReady, setVapiReady] = useState(false);
 
+  // AI Summary State
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [callSummary, setCallSummary] = useState<CallSummary | null>(null);
+
   const vapiRef = useRef<any>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const demoIndexRef = useRef(0);
   const demoTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptRef = useRef<TranscriptEntry[]>([]);
 
-  // Auto-scroll transcript
+  // Keep transcriptRef in sync
   useEffect(() => {
+    transcriptRef.current = transcript;
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
+
+  // Generate Call Summary & Save Record
+  const generateSummaryAndSave = useCallback(
+    async (currentTranscript: TranscriptEntry[]) => {
+      if (currentTranscript.length === 0) return;
+
+      setIsGeneratingSummary(true);
+      toast.info("Generating AI Call Summary...");
+
+      try {
+        const res = await fetch("/api/call-summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript: currentTranscript.map((t) => ({ role: t.role, text: t.text })),
+            listingTitle: listing.title,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.summary) {
+            setCallSummary(data.summary);
+            addCallRecord({
+              listingId: listing.id,
+              listingTitle: listing.title,
+              customerName: data.summary.customerName || "Anonymous Caller",
+              duration: `${Math.max(1, Math.ceil(currentTranscript.length / 2))}m 15s`,
+              transcript: currentTranscript,
+              summary: data.summary,
+            });
+            toast.success("AI Call Summary generated & logged!");
+          }
+        }
+      } catch (err) {
+        console.error("Error generating call summary:", err);
+      } finally {
+        setIsGeneratingSummary(false);
+      }
+    },
+    [listing, addCallRecord]
+  );
 
   // Initialize Vapi SDK
   const initVapi = useCallback(async () => {
     try {
-      const res = await fetch("/api/vapi/session");
-      const data = await res.json();
+      let publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
+      let assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || "";
+      let isDemo = !publicKey || !assistantId;
 
-      if (!data.publicKey || !data.assistantId || data.demo) {
+      try {
+        const res = await fetch("/api/vapi/session");
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data.publicKey && data.assistantId && !data.demo) {
+              publicKey = data.publicKey;
+              assistantId = data.assistantId;
+              isDemo = false;
+            }
+          }
+        }
+      } catch (fetchErr) {
+        console.warn("Session API fetch error, using client env vars fallback:", fetchErr);
+      }
+
+      if (isDemo || !publicKey || !assistantId) {
         setIsDemoMode(true);
         return;
       }
 
-      // Dynamic import of Vapi Web SDK
       const VapiModule = await import("@vapi-ai/web");
       const VapiClass = VapiModule.default || VapiModule;
-      const vapi = new VapiClass(data.publicKey);
+      const vapi = new VapiClass(publicKey);
 
       vapi.on("call-start", () => {
         setCallStatus("listening");
         setIsCallActive(true);
+        setCallSummary(null);
       });
 
       vapi.on("speech-start", () => {
@@ -93,6 +162,7 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
       vapi.on("call-end", () => {
         setIsCallActive(false);
         setCallStatus("idle");
+        generateSummaryAndSave(transcriptRef.current);
       });
 
       vapi.on("error", (err: any) => {
@@ -104,14 +174,12 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
       vapiRef.current = vapi;
       setVapiReady(true);
       setIsDemoMode(false);
-
-      // Store assistantId for later use
-      (vapi as any).__assistantId = data.assistantId;
+      (vapi as any).__assistantId = assistantId;
     } catch (err) {
       console.error("Failed to initialize Vapi:", err);
       setIsDemoMode(true);
     }
-  }, []);
+  }, [generateSummaryAndSave]);
 
   useEffect(() => {
     initVapi();
@@ -125,10 +193,10 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
 
   const startCall = async () => {
     setTranscript([]);
+    setCallSummary(null);
     demoIndexRef.current = 0;
 
     if (isDemoMode) {
-      // Demo mode: simulate a conversation
       setIsCallActive(true);
       setCallStatus("connecting");
 
@@ -148,7 +216,6 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
           };
           setTranscript((prev) => [...prev, entry]);
 
-          // Add a simulated user response after assistant
           demoTimerRef.current = setTimeout(() => {
             setCallStatus("listening");
 
@@ -176,6 +243,7 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
             } else {
               setCallStatus("idle");
               setIsCallActive(false);
+              generateSummaryAndSave(transcriptRef.current);
             }
           }, 2500);
         };
@@ -183,7 +251,6 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
         addDemoMessage(0);
       }, 1200);
     } else if (vapiRef.current) {
-      // Real Vapi call
       setIsCallActive(true);
       setCallStatus("connecting");
 
@@ -192,18 +259,18 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
       try {
         await vapiRef.current.start(assistantId, {
           variableValues: {
-            propertyTitle: listing.title,
-            propertyPrice: listing.formattedPrice,
+            listingTitle: listing.title,
+            listingPrice: listing.formattedPrice,
             propertyType: listing.propertyType,
-            propertyBeds: String(listing.beds),
-            propertyBaths: String(listing.baths),
-            propertySqft: String(listing.sqft),
-            propertyParking: String(listing.parking),
+            listingBeds: String(listing.beds),
+            listingBaths: String(listing.baths),
+            listingSqft: String(listing.sqft),
+            listingParking: String(listing.parking),
             propertyYearBuilt: String(listing.yearBuilt),
-            propertyAddress: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
-            propertyDescription: listing.description,
+            listingAddress: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
+            listingDescription: listing.description,
             propertyListingType: listing.listingType,
-            propertyPriceDisplay: listing.priceDisplay,
+            listingPriceDisplay: listing.priceDisplay,
           },
         });
       } catch (err) {
@@ -223,6 +290,7 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
 
     setIsCallActive(false);
     setCallStatus("idle");
+    generateSummaryAndSave(transcriptRef.current);
   };
 
   const toggleWidget = () => {
@@ -252,7 +320,6 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
 
   return (
     <>
-      {/* Collapsed Floating Pill */}
       {!isOpen && (
         <button
           onClick={toggleWidget}
@@ -272,15 +339,14 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
         </button>
       )}
 
-      {/* Expanded Widget Panel */}
       {isOpen && (
         <div
-          className="fixed bottom-6 right-6 z-50 w-[340px] sm:w-[380px] rounded-2xl overflow-hidden
+          className="fixed bottom-6 right-6 z-50 w-[350px] sm:w-[400px] rounded-2xl overflow-hidden
             bg-card/95 backdrop-blur-xl border border-border shadow-2xl
-            animate-in slide-in-from-bottom-4 fade-in duration-300"
+            animate-in slide-in-from-bottom-4 fade-in duration-300 flex flex-col max-h-[600px]"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#7a1f2b] to-[#4a0d16] text-white px-4 py-3.5 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#7a1f2b] to-[#4a0d16] text-white px-4 py-3.5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="h-9 w-9 rounded-full bg-white/15 flex items-center justify-center text-sm font-bold">
@@ -314,9 +380,8 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
             </div>
           </div>
 
-          {/* Demo Mode Banner */}
           {isDemoMode && (
-            <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center">
+            <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center shrink-0">
               <p className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold">
                 Demo Mode — connect Vapi for live calls
               </p>
@@ -324,8 +389,8 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
           )}
 
           {/* Property Context Bar */}
-          <div className="px-4 py-2.5 bg-muted/50 border-b border-border/60 flex items-center gap-2.5">
-            <div className="h-8 w-12 rounded-lg overflow-hidden bg-muted shrink-0">
+          <div className="px-4 py-2 bg-muted/50 border-b border-border/60 flex items-center gap-2.5 shrink-0">
+            <div className="h-7 w-10 rounded-lg overflow-hidden bg-muted shrink-0">
               <img src={listing.image} alt="" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
@@ -334,23 +399,14 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
             </div>
           </div>
 
-          {/* Transcript Area */}
-          <div className="h-56 overflow-y-auto px-4 py-3 space-y-2.5 bg-background/80">
-            {transcript.length === 0 && !isCallActive && (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
+          {/* Transcript & Summary Scroll Area */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-background/80 min-h-[200px]">
+            {transcript.length === 0 && !isCallActive && !callSummary && (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-2 py-8 opacity-60">
                 <Volume2 className="w-8 h-8 text-muted-foreground/50" />
                 <p className="text-[11px] text-muted-foreground font-medium">
                   Click the mic button below to start talking with Alexis about this property.
                 </p>
-              </div>
-            )}
-
-            {transcript.length === 0 && isCallActive && callStatus === "connecting" && (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-2">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-primary animate-pulse" />
-                </div>
-                <p className="text-[11px] text-muted-foreground font-semibold">Connecting to Alexis...</p>
               </div>
             )}
 
@@ -374,14 +430,57 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
               </div>
             ))}
 
-            {isCallActive && callStatus === "speaking" && (
-              <div className="flex justify-start">
-                <div className="bg-[#7a1f2b]/20 text-primary px-3 py-2 rounded-xl rounded-bl-sm">
-                  <div className="flex gap-1 items-center">
-                    <span className="block h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="block h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="block h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+            {isGeneratingSummary && (
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-2 text-xs text-primary font-semibold">
+                <RotateCw className="w-4 h-4 animate-spin" />
+                <span>Generating AI Call Summary & Lead Insights...</span>
+              </div>
+            )}
+
+            {/* Generated Summary Card */}
+            {callSummary && !isCallActive && (
+              <div className="mt-3 p-3.5 rounded-xl bg-gradient-to-br from-card to-muted/80 border border-primary/20 space-y-2.5 text-xs animate-in fade-in duration-300 shadow-xs">
+                <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    <BrainCircuit className="w-4 h-4 text-primary" />
+                    AI Call Summary
+                  </span>
+                  <Badge className={`border-none text-[9px] font-bold ${
+                    callSummary.sentiment === "Highly Interested"
+                      ? "bg-emerald-500 text-white"
+                      : callSummary.sentiment === "Interested"
+                      ? "bg-emerald-600/20 text-emerald-700"
+                      : "bg-gray-500 text-white"
+                  }`}>
+                    {callSummary.sentiment}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-muted-foreground block text-[9px] uppercase font-bold">Caller</span>
+                    <span className="font-semibold text-foreground">{callSummary.customerName}</span>
                   </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[9px] uppercase font-bold">Location</span>
+                    <span className="font-semibold text-foreground">{callSummary.location}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[9px] uppercase font-bold">Config / Budget</span>
+                    <span className="font-semibold text-foreground">{callSummary.configuration} ({callSummary.budgetRange})</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[9px] uppercase font-bold">Timeline</span>
+                    <span className="font-semibold text-foreground">{callSummary.timeline}</span>
+                  </div>
+                </div>
+
+                <div className="pt-1.5 border-t border-border/60">
+                  <span className="text-muted-foreground block text-[9px] uppercase font-bold mb-0.5">Next Recommended Step</span>
+                  <p className="font-semibold text-primary text-[11px] flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{callSummary.nextStep}</span>
+                  </p>
                 </div>
               </div>
             )}
@@ -390,18 +489,17 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
           </div>
 
           {/* Footer Controls */}
-          <div className="px-4 py-3 border-t border-border/60 bg-card flex items-center justify-between">
+          <div className="px-4 py-3 border-t border-border/60 bg-card flex items-center justify-between shrink-0">
             {!isCallActive ? (
               <Button
                 onClick={startCall}
                 className="w-full h-10 gap-2 rounded-xl bg-gradient-to-r from-[#7a1f2b] to-[#4a0d16] text-white font-semibold text-xs hover:opacity-90 transition-all"
               >
                 <Mic className="w-4 h-4" />
-                <span>Start Conversation</span>
+                <span>{transcript.length > 0 ? "Start New Conversation" : "Start Conversation"}</span>
               </Button>
             ) : (
               <div className="flex items-center justify-between w-full gap-3">
-                {/* Pulsing Mic Indicator */}
                 <div className="flex items-center gap-2.5">
                   <div className={`relative h-10 w-10 rounded-full flex items-center justify-center transition-all ${
                     callStatus === "listening"
@@ -429,7 +527,6 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
                   </div>
                 </div>
 
-                {/* End Call Button */}
                 <Button
                   onClick={endCall}
                   variant="destructive"
@@ -437,7 +534,7 @@ export function VoiceWidget({ listing }: VoiceWidgetProps) {
                   className="h-9 gap-1.5 rounded-xl text-xs font-semibold px-4"
                 >
                   <PhoneOff className="w-3.5 h-3.5" />
-                  <span>End</span>
+                  <span>End Call</span>
                 </Button>
               </div>
             )}
