@@ -1,69 +1,369 @@
-EstateCall AI — Real Estate Voice Calling Agent
+<div align="center">
 
-A live AI voice-calling agent for real estate, built as a full agency platform. A visitor on any property listing can talk to Alexis, an AI sales executive who greets them, qualifies their requirements, answers questions about the property, and hands off a structured lead summary — in Hindi, Hinglish, or English.
+# 🏡 EstateCall AI
+### AI-Powered Real Estate Voice Calling Platform
 
-Live demo: real-estate-ai-agent-vickymaurya1s-projects.vercel.app/dashboard
+> **A multilingual AI voice sales executive for real estate that qualifies leads, answers property queries, and automates customer interactions in real time.**
 
-What it does
-A visitor opens a property page and talks to Alexis via a floating voice widget — a real, live voice call, not a chatbot.
-Alexis greets them, asks whether they're buying for self-use or investment, gathers location/configuration/budget/timeline, and answers questions about the property or a sample project (Riverdale Greens, Sector 150, Noida) using only real, provided facts.
-After the call, an AI-generated summary (lead intent, budget, timeline, next step) is saved to a searchable call log.
-The same platform includes the agency side of the business — listings, marketplace inquiries, viewing bookings, and a client portal — so the voice agent sits inside a working product, not a standalone demo page.
-Feature highlights
-Live multilingual voice agent — real-time Hindi/Hinglish/English conversation via Vapi, powered by OpenAI for reasoning and Deepgram for speech recognition
-Property-aware conversations — the agent is given the exact listing a visitor is viewing (price, specs, address) and answers questions specific to it
-AI call summarization — every finished call is automatically distilled into a structured lead record (name, requirements, budget, next step)
-Full listings management — add/edit/delete properties with photo uploads, filters, and search
-Marketplace & client portal — buyer inquiries, replies, viewing scheduling with reschedule flow, and reservation tracking, all live-synced across the app
-Call log with export — searchable transcript history with CSV/JSON export
-Tech stack
-Framework: Next.js 16 (App Router), TypeScript, Tailwind CSS v4
-UI: shadcn/ui, Radix primitives, lucide-react, recharts, framer-motion
-Voice: Vapi Web SDK (orchestration) + OpenAI GPT-4o (conversation model) + Deepgram Nova-3 (multilingual transcription)
-State: React Context + localStorage (no database — the app is intentionally frontend-first)
-Hosting: Vercel, with two small serverless routes for anything that needs a server (Vapi session credentials, call-summary generation)
-Getting started
-1. Install dependencies
-bash
-npm install
-2. Set up environment variables
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwind-css)](https://tailwindcss.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai)](https://openai.com/)
+[![Vapi](https://img.shields.io/badge/Vapi-Voice%20AI-orange)](https://vapi.ai/)
+[![Deepgram](https://img.shields.io/badge/Deepgram-Nova--3-13AA52)](https://deepgram.com/)
 
-Create .env.local in the project root:
+🌐 **Live Demo:** https://real-estate-ai-agent-vickymaurya1s-projects.vercel.app/dashboard
 
-env
-NEXT_PUBLIC_VAPI_PUBLIC_KEY=your_vapi_public_key
-VAPI_ASSISTANT_ID=your_vapi_assistant_id
-NEXT_PUBLIC_VAPI_ASSISTANT_ID=your_vapi_assistant_id
-OPENAI_API_KEY=your_openai_api_key
+</div>
 
-OPENAI_API_KEY is optional — without it, call summaries fall back to a rule-based extraction instead of an LLM-generated one; nothing else in the app is affected.
+---
 
-3. Run locally
-bash
-npm run dev
+# ✨ Overview
 
-Open http://localhost:3000.
+**EstateCall AI** is a full-stack **AI-powered Real Estate Agency Platform** featuring a **live multilingual voice calling agent**.
 
-Deploying to Vercel
-Push the repo to GitHub and import it into Vercel.
-Add the same four environment variables above under Project Settings → Environment Variables, scoped to Production (and Preview/Development if needed).
-Redeploy after adding or changing any environment variable — Next.js bakes them in at build time, so a plain git push alone won't pick up a newly added variable until a fresh build runs.
-Configuring the voice agent
+Instead of filling out forms or chatting with a bot, visitors can **talk naturally** with **Alexis**, an AI real estate sales executive that can:
 
-The assistant's behavior lives in two places that must stay in sync:
+- 🎙️ Hold natural voice conversations
+- 🏠 Answer property-specific questions
+- 💰 Qualify buyers
+- 📅 Schedule follow-ups
+- 📋 Generate structured lead summaries
+- 🌍 Speak **Hindi, Hinglish, and English**
 
-Vapi Dashboard — the assistant's system prompt, first message, model, and transcriber settings.
-src/components/ui/voice-widget.tsx — the variableValues object passed into vapi.start(), which fills in {{placeholders}} in the system prompt with the specific listing's live data.
+Unlike standalone AI demos, EstateCall AI integrates the voice assistant into a complete real estate management platform including listings, marketplace, bookings, and client portal.
 
-If you rename a variable in one place, rename it in the other — a mismatch fails silently (the placeholder just never gets filled) rather than throwing an error, so it's worth double-checking after any prompt edit. See the code comments in voice-widget.tsx for the current variable names in use.
+---
 
-Project structure
+# 🚀 Key Features
+
+## 🤖 Live AI Voice Agent
+
+- Real-time AI voice conversations
+- Human-like responses
+- Multilingual support
+- Instant property assistance
+
+Powered by:
+
+- **Vapi**
+- **OpenAI GPT-4o**
+- **Deepgram Nova-3**
+
+---
+
+## 🏡 Property-Aware Conversations
+
+Alexis knows exactly which property the visitor is viewing.
+
+The AI can answer questions like:
+
+- Price
+- Configuration
+- Amenities
+- Location
+- Builder
+- Nearby facilities
+- Payment plans
+- Possession timeline
+
+without hallucinating or inventing information.
+
+---
+
+## 📝 AI Lead Qualification
+
+During the conversation, Alexis automatically collects:
+
+- Buyer Name
+- Budget
+- Preferred Location
+- Property Configuration
+- Timeline
+- Buying Purpose
+- Additional Requirements
+
+Every call becomes a structured CRM lead.
+
+---
+
+## 📊 AI Call Summaries
+
+After every conversation, EstateCall AI automatically generates:
+
+- Customer Intent
+- Budget
+- Timeline
+- Requirements
+- Recommended Next Step
+
+No manual note-taking required.
+
+---
+
+## 🏢 Complete Real Estate Agency Dashboard
+
+The project isn't just a voice agent.
+
+It includes an entire agency management platform:
+
+- Dashboard
+- Listings Management
+- Marketplace
+- Buyer Inquiries
+- Viewing Bookings
+- Reservation Tracking
+- Client Portal
+- Call Logs
+
+---
+
+## 📞 Call History
+
+Every interaction is stored with:
+
+- Call transcript
+- Lead summary
+- Search support
+- Export to CSV
+- Export to JSON
+
+---
+
+# 🎯 User Flow
+
+```text
+Visitor opens Property Listing
+            │
+            ▼
+Clicks "Talk to Alexis"
+            │
+            ▼
+Live Voice Conversation
+            │
+            ▼
+AI Qualifies Buyer
+            │
+            ▼
+Answers Property Questions
+            │
+            ▼
+Call Ends
+            │
+            ▼
+AI Generates Lead Summary
+            │
+            ▼
+Saved in Agency Dashboard
+```
+
+---
+
+# 🛠️ Tech Stack
+
+| Category | Technology |
+|-----------|------------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| UI Components | shadcn/ui |
+| Icons | Lucide React |
+| Charts | Recharts |
+| Animation | Framer Motion |
+| Voice Orchestration | Vapi |
+| AI Model | OpenAI GPT-4o |
+| Speech Recognition | Deepgram Nova-3 |
+| State Management | React Context API |
+| Storage | localStorage |
+| Hosting | Vercel |
+
+---
+
+# 📂 Project Structure
+
+```bash
 src/
-├─ app/
-│  ├─ dashboard/     # Agency-side pages (overview, listings, marketplace, call log, etc.)
-│  ├─ portal/        # Client-facing pages (viewings, reservations, inquiries)
-│  ├─ listing/[id]/  # Public property detail page with the voice widget
-│  └─ api/           # Serverless routes (Vapi session, call summary)
-├─ components/       # Shared UI (sidebar, top bar, voice widget, stat cards)
-├─ context/          # Shared app state (listings, viewings, inquiries, calls)
-└─ lib/              # Seed data and types
+│
+├── app/
+│   ├── dashboard/          # Agency Dashboard
+│   ├── portal/             # Client Portal
+│   ├── listing/[id]/       # Public Property Pages
+│   └── api/                # Serverless APIs
+│
+├── components/             # Shared UI Components
+│
+├── context/                # Global App State
+│
+├── lib/                    # Types & Seed Data
+│
+└── hooks/                  # Custom Hooks
+```
+
+---
+
+# ⚙️ Environment Variables
+
+Create a `.env.local` file.
+
+```env
+NEXT_PUBLIC_VAPI_PUBLIC_KEY=your_vapi_public_key
+
+VAPI_ASSISTANT_ID=your_vapi_assistant_id
+
+NEXT_PUBLIC_VAPI_ASSISTANT_ID=your_vapi_assistant_id
+
+OPENAI_API_KEY=your_openai_api_key
+```
+
+> **Note:** `OPENAI_API_KEY` is optional. Without it, call summaries fall back to rule-based extraction.
+
+---
+
+# 🚀 Getting Started
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/estatecall-ai.git
+```
+
+## 2. Install Dependencies
+
+```bash
+npm install
+```
+
+## 3. Configure Environment Variables
+
+Create `.env.local` using the variables above.
+
+---
+
+## 4. Run Development Server
+
+```bash
+npm run dev
+```
+
+Open:
+
+```
+http://localhost:3000
+```
+
+---
+
+# ☁️ Deployment
+
+Deploy effortlessly using **Vercel**.
+
+1. Push your repository to GitHub.
+2. Import the project into Vercel.
+3. Add all environment variables.
+4. Redeploy the application.
+
+> **Important:** Next.js reads environment variables during build time. Any changes require a fresh deployment.
+
+---
+
+# 🎤 Voice Agent Configuration
+
+The assistant configuration exists in **two places**:
+
+### 1️⃣ Vapi Dashboard
+
+Contains:
+
+- System Prompt
+- First Message
+- Model
+- Voice
+- Transcriber
+
+### 2️⃣ `voice-widget.tsx`
+
+Contains:
+
+```ts
+variableValues
+```
+
+These variables populate placeholders like:
+
+```text
+{{listing_price}}
+
+{{listing_address}}
+
+{{listing_name}}
+```
+
+⚠️ Both must stay synchronized.
+
+If a placeholder name changes in one place, update it in the other.
+
+---
+
+# 🌟 Why EstateCall AI?
+
+✅ Real-time Voice AI
+
+✅ Property-aware conversations
+
+✅ AI Lead Qualification
+
+✅ Automatic CRM summaries
+
+✅ Multilingual (Hindi • Hinglish • English)
+
+✅ Complete Agency Dashboard
+
+✅ Client Portal
+
+✅ Marketplace
+
+✅ Viewing Management
+
+✅ Responsive UI
+
+✅ Production-ready architecture
+
+---
+
+# 🔮 Future Improvements
+
+- PostgreSQL integration
+- Authentication
+- CRM integrations
+- WhatsApp automation
+- Email follow-ups
+- SMS reminders
+- Analytics Dashboard
+- RAG-based property knowledge
+- Multi-agent support
+- Admin panel
+- Voice cloning
+
+---
+
+# 🤝 Contributing
+
+Contributions, feature requests, and suggestions are always welcome.
+
+Feel free to fork the project and submit a Pull Request.
+
+---
+
+# 📄 License
+
+This project is licensed under the **MIT License**.
+
+---
+
+<div align="center">
+
+### ⭐ If you found this project useful, consider giving it a Star!
+
+Built with ❤️ using **Next.js**, **OpenAI**, **Vapi**, and **Deepgram**
+
+</div>
