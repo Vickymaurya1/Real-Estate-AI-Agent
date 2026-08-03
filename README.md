@@ -201,70 +201,10 @@ src/
 
 ---
 
-# ⚙️ Environment Variables
 
-Create a `.env.local` file.
-
-```env
-NEXT_PUBLIC_VAPI_PUBLIC_KEY=your_vapi_public_key
-
-VAPI_ASSISTANT_ID=your_vapi_assistant_id
-
-NEXT_PUBLIC_VAPI_ASSISTANT_ID=your_vapi_assistant_id
-
-OPENAI_API_KEY=your_openai_api_key
-```
-
-> **Note:** `OPENAI_API_KEY` is optional. Without it, call summaries fall back to rule-based extraction.
 
 ---
 
-# 🚀 Getting Started
-
-## 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/estatecall-ai.git
-```
-
-## 2. Install Dependencies
-
-```bash
-npm install
-```
-
-## 3. Configure Environment Variables
-
-Create `.env.local` using the variables above.
-
----
-
-## 4. Run Development Server
-
-```bash
-npm run dev
-```
-
-Open:
-
-```
-http://localhost:3000
-```
-
----
-
-# ☁️ Deployment
-
-Deploy effortlessly using **Vercel**.
-
-1. Push your repository to GitHub.
-2. Import the project into Vercel.
-3. Add all environment variables.
-4. Redeploy the application.
-
-> **Important:** Next.js reads environment variables during build time. Any changes require a fresh deployment.
-
----
 
 # 🎤 Voice Agent Configuration
 
@@ -288,21 +228,7 @@ Contains:
 variableValues
 ```
 
-These variables populate placeholders like:
 
-```text
-{{listing_price}}
-
-{{listing_address}}
-
-{{listing_name}}
-```
-
-⚠️ Both must stay synchronized.
-
-If a placeholder name changes in one place, update it in the other.
-
----
 
 # 🌟 Why EstateCall AI?
 
