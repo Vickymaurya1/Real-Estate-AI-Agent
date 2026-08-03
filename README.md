@@ -1,87 +1,69 @@
-# 🏰 EstateCall — Voice AI Real Estate Platform
+EstateCall AI — Real Estate Voice Calling Agent
 
-EstateCall is a modern, high-conversion Real Estate AI Agent platform built with Next.js 16 App Router, TypeScript, Tailwind CSS v4, Vapi Web SDK, OpenAI, and shadcn/ui.
+A live AI voice-calling agent for real estate, built as a full agency platform. A visitor on any property listing can talk to Alexis, an AI sales executive who greets them, qualifies their requirements, answers questions about the property, and hands off a structured lead summary — in Hindi, Hinglish, or English.
 
----
+Live demo: real-estate-ai-agent-vickymaurya1s-projects.vercel.app/dashboard
 
-## 🚀 Quick Start (Local Setup)
-
-### 1. Install Dependencies
-```bash
+What it does
+A visitor opens a property page and talks to Alexis via a floating voice widget — a real, live voice call, not a chatbot.
+Alexis greets them, asks whether they're buying for self-use or investment, gathers location/configuration/budget/timeline, and answers questions about the property or a sample project (Riverdale Greens, Sector 150, Noida) using only real, provided facts.
+After the call, an AI-generated summary (lead intent, budget, timeline, next step) is saved to a searchable call log.
+The same platform includes the agency side of the business — listings, marketplace inquiries, viewing bookings, and a client portal — so the voice agent sits inside a working product, not a standalone demo page.
+Feature highlights
+Live multilingual voice agent — real-time Hindi/Hinglish/English conversation via Vapi, powered by OpenAI for reasoning and Deepgram for speech recognition
+Property-aware conversations — the agent is given the exact listing a visitor is viewing (price, specs, address) and answers questions specific to it
+AI call summarization — every finished call is automatically distilled into a structured lead record (name, requirements, budget, next step)
+Full listings management — add/edit/delete properties with photo uploads, filters, and search
+Marketplace & client portal — buyer inquiries, replies, viewing scheduling with reschedule flow, and reservation tracking, all live-synced across the app
+Call log with export — searchable transcript history with CSV/JSON export
+Tech stack
+Framework: Next.js 16 (App Router), TypeScript, Tailwind CSS v4
+UI: shadcn/ui, Radix primitives, lucide-react, recharts, framer-motion
+Voice: Vapi Web SDK (orchestration) + OpenAI GPT-4o (conversation model) + Deepgram Nova-3 (multilingual transcription)
+State: React Context + localStorage (no database — the app is intentionally frontend-first)
+Hosting: Vercel, with two small serverless routes for anything that needs a server (Vapi session credentials, call-summary generation)
+Getting started
+1. Install dependencies
+bash
 npm install
-```
+2. Set up environment variables
 
-### 2. Environment Variables (`.env.local`)
-Create a `.env.local` file in the root directory:
+Create .env.local in the project root:
 
-```env
-# Vapi AI Web SDK (Public Key safe for browser execution)
-NEXT_PUBLIC_VAPI_PUBLIC_KEY=508a553a-5b92-45d0-a732-43af737d39d9
+env
+NEXT_PUBLIC_VAPI_PUBLIC_KEY=your_vapi_public_key
+VAPI_ASSISTANT_ID=your_vapi_assistant_id
+NEXT_PUBLIC_VAPI_ASSISTANT_ID=your_vapi_assistant_id
+OPENAI_API_KEY=your_openai_api_key
 
-# Vapi Assistant ID (Server-side + client fallback)
-VAPI_ASSISTANT_ID=52fb87ec-087c-4f46-8a55-e4a684ebdc75
-NEXT_PUBLIC_VAPI_ASSISTANT_ID=52fb87ec-087c-4f46-8a55-e4a684ebdc75
+OPENAI_API_KEY is optional — without it, call summaries fall back to a rule-based extraction instead of an LLM-generated one; nothing else in the app is affected.
 
-# OpenAI API Key (For AI Call Summarization in /api/call-summary)
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-### 3. Run Development Server
-```bash
+3. Run locally
+bash
 npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
----
+Open http://localhost:3000.
 
-## ⚠️ CRITICAL TECHNICAL REQUIREMENT: Vapi Variable Naming Synchronization
+Deploying to Vercel
+Push the repo to GitHub and import it into Vercel.
+Add the same four environment variables above under Project Settings → Environment Variables, scoped to Production (and Preview/Development if needed).
+Redeploy after adding or changing any environment variable — Next.js bakes them in at build time, so a plain git push alone won't pick up a newly added variable until a fresh build runs.
+Configuring the voice agent
 
-> **DEVELOPMENT LESSON & BUG PREVENTION NOTICE**
-> 
-> During development, we encountered an issue where property metadata variables were not substituting in Vapi calls because the object keys in `vapi.start()` did not match the placeholders expected by the Vapi assistant system prompt.
+The assistant's behavior lives in two places that must stay in sync:
 
-When configuring your Vapi assistant prompt in the Vapi Dashboard, your system prompt **MUST** reference the exact variable names sent by [src/components/ui/voice-widget.tsx](file:///c:/Users/vicky/Downloads/Real%20Estate%20AI%20Agent/src/components/ui/voice-widget.tsx):
+Vapi Dashboard — the assistant's system prompt, first message, model, and transcriber settings.
+src/components/ui/voice-widget.tsx — the variableValues object passed into vapi.start(), which fills in {{placeholders}} in the system prompt with the specific listing's live data.
 
-| Vapi System Prompt Placeholder | `voice-widget.tsx` Key | Description |
-|--------------------------------|------------------------|-------------|
-| `{{listingTitle}}` | `listingTitle` | Property Title (e.g. "The Grand Horizon Villa") |
-| `{{listingPrice}}` | `listingPrice` | Formatted Price (e.g. "$3,450,000") |
-| `{{propertyType}}` | `propertyType` | Type (e.g. "House", "Apartment") |
-| `{{listingBeds}}` | `listingBeds` | Bedrooms count (e.g. "5") |
-| `{{listingBaths}}` | `listingBaths` | Bathrooms count (e.g. "6") |
-| `{{listingSqft}}` | `listingSqft` | Area in sq ft (e.g. "5800") |
-| `{{listingParking}}` | `listingParking` | Parking spaces count (e.g. "3") |
-| `{{propertyYearBuilt}}` | `propertyYearBuilt` | Year built (e.g. "2023") |
-| `{{listingAddress}}` | `listingAddress` | Full property address |
-| `{{listingDescription}}` | `listingDescription` | Property description summary |
-| `{{propertyListingType}}` | `propertyListingType` | "For Sale" or "For Rent" |
-| `{{listingPriceDisplay}}` | `listingPriceDisplay` | "Fixed Price", "Starting From", or "Price on Request" |
+If you rename a variable in one place, rename it in the other — a mismatch fails silently (the placeholder just never gets filled) rather than throwing an error, so it's worth double-checking after any prompt edit. See the code comments in voice-widget.tsx for the current variable names in use.
 
-If you alter variable names in your Vapi system prompt, you **must** update `voice-widget.tsx` to match, otherwise placeholders like `{{listingTitle}}` will render empty or un-substituted during voice calls.
-
----
-
-## 🌐 Deploying to Vercel
-
-### Step 1: Push Repository
-Push your project to GitHub/GitLab.
-
-### Step 2: Configure Environment Variables in Vercel
-In Vercel Dashboard → **Project Settings** → **Environment Variables**, add:
-
-1. `NEXT_PUBLIC_VAPI_PUBLIC_KEY` — Value: `508a553a-5b92-45d0-a732-43af737d39d9` (Select **Production**, **Preview**, **Development**)
-2. `VAPI_ASSISTANT_ID` — Value: `52fb87ec-087c-4f46-8a55-e4a684ebdc75`
-3. `NEXT_PUBLIC_VAPI_ASSISTANT_ID` — Value: `52fb87ec-087c-4f46-8a55-e4a684ebdc75`
-4. `OPENAI_API_KEY` — Value: `your_openai_api_key_here` (Kept server-only, never exposed to client)
-
-### Step 3: Trigger Redeploy
-After adding or modifying environment variables in Vercel, click **Redeploy** on your latest deployment (or push a new commit) for Next.js to inject the environment variables.
-
----
-
-## 📱 Feature Highlights
-
-- **Agency Dashboard (`/dashboard`)**: Analytics, Listings CRUD with local drag-and-drop file uploads, Marketplace inquiry replies, AI Voice Agent management, Knowledge Base editor (pre-filled with Riverdale Greens, Sector 150 Noida facts).
-- **Client Portal (`/portal`)**: My Viewings (with 30-min date/time slot rescheduling panel), My Hold Deposits, My Inquiries thread viewer.
-- **Dynamic Property Detail (`/listing/[id]`)**: Full photo gallery, pre-filled "Book a Viewing" & "Ask a Question" modals, and interactive 24/7 **Voice AI Widget** with real-time audio calling & automated AI lead summary generation.
-- **Voice AI Call Logs (`/dashboard/call-log`)**: Full transcripts, structured AI Lead summaries, sentiment badges, and CSV / JSON export actions.
+Project structure
+src/
+├─ app/
+│  ├─ dashboard/     # Agency-side pages (overview, listings, marketplace, call log, etc.)
+│  ├─ portal/        # Client-facing pages (viewings, reservations, inquiries)
+│  ├─ listing/[id]/  # Public property detail page with the voice widget
+│  └─ api/           # Serverless routes (Vapi session, call summary)
+├─ components/       # Shared UI (sidebar, top bar, voice widget, stat cards)
+├─ context/          # Shared app state (listings, viewings, inquiries, calls)
+└─ lib/              # Seed data and types
